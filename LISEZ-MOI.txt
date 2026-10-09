@@ -1,0 +1,20 @@
+OVERCLOCKED - presentation (Devoxx Robot Games, Room 10)
+
+1. Decompresse le dossier (ne lance pas depuis le zip).
+2. Ouvre presentation.html avec Chrome, puis appuie sur F (plein ecran).
+   (Optionnel) Fleches haut / bas sur l'ecran titre : duree de la demo (75 s par defaut).
+3. Commence ta phrase, et appuie sur la fleche droite au milieu : les robots t'interrompent (partie 1).
+4. A la fin de la partie 1, le jeu s'affiche tout seul : tu joues.
+   Le petit compte a rebours (en bas a droite) demarre a ton premier clic dans le jeu.
+5. A 0:00, ton jeu "plante" (SYSTEM OVERRIDE) et Claude prend l'ecran : la partie 2 demarre toute seule.
+   Pendant la demo, les touches de la page sont desactivees (tes touches vont au jeu),
+   sauf B (plan B). Claude arrive tout seul a 0:00.
+
+Si le bas de l'image est coupe sur l'ecran de la salle : appuie sur M (une ligne de marge, puis deux, puis aucune).
+Le reglage est garde sur cet ordi.
+
+Touches : fleche droite = etape suivante, P = pause, B = plan B (video complete),
+1 / 2 / 3 = aller a une etape, R = recommencer, ? = aide.
+Le jeu (version concours) est dans le dossier : pas besoin d'Internet ni de Wi-Fi.
+Garde tous les fichiers ensemble dans le meme dossier.
+Si quelque chose ne marche pas : appuie sur B (video complete).
