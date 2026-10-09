@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overclocked · Devoxx Robot Games</title>
+<style>
+  :root { --bg: #000; --ink: #f0ece4; --muted: #9aa3b5; --orange: #ff9a3c; --red: #e12d2d; --claude: #d97757; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  /* a bottom margin, only if the room's screen cuts the bottom (Jessica): M cycles none / one line / two lines */
+  :root { --gap: 0px; }
+  .stage { position: fixed; inset: 0; bottom: var(--gap); display: none; }
+  .stage.on { display: block; }
+  video { width: 100%; height: 100%; object-fit: contain; object-position: center top; background: #000; display: block; }
+  iframe { width: 100%; height: 100%; border: 0; display: block; background: #0b0d12; }
+  body.hidecursor { cursor: none; }
+  #next { position: fixed; right: 18px; bottom: calc(18px + var(--gap)); z-index: 5; display: none; align-items: center; gap: 8px;
+          padding: 10px 16px 10px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.25);
+          background: rgba(12,14,20,.55); color: var(--ink); font: 600 15px system-ui, sans-serif; cursor: pointer;
+          opacity: .35; transition: opacity .2s; }
+  #next:hover, #next:focus-visible { opacity: 1; }
+  #next.show { display: none; }  /* no Part 2 button on screen (Jessica): the → key still goes to part 2 */
+  #offline { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; display: none; text-align: center;
+             color: var(--ink); background: rgba(12,14,20,.9); border: 1px solid rgba(255,255,255,.2); border-radius: 16px; padding: 22px 28px; }
+  #offline b { color: var(--orange); }
+  #help { position: fixed; left: 16px; bottom: calc(16px + var(--gap)); z-index: 9; display: none; color: var(--muted); background: rgba(12,14,20,.92);
+          border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 14px 18px; font-size: 14px; line-height: 1.7; }
+  #help kbd { color: var(--ink); background: #222634; border-radius: 5px; padding: 1px 7px; font: 600 13px ui-monospace, monospace; }
+  /* the demo's countdown: discreet (Jessica) */
+  #count { position: fixed; right: 18px; bottom: calc(70px + var(--gap)); z-index: 5; display: none; align-items: baseline; gap: 7px; opacity: .55;
+           font: 700 20px ui-monospace, "SF Mono", Menlo, monospace; color: #fff; background: rgba(12,14,20,.6);
+           border: 1px solid rgba(255,255,255,.2); border-radius: 10px; padding: 4px 10px; }
+  #count small { font: 600 10px system-ui, sans-serif; color: var(--muted); letter-spacing: .08em; }
+  #count.warn { color: #ffb15c; border-color: rgba(255,177,92,.6); }
+  #count.zero { color: #ff6b6b; border-color: rgba(255,90,90,.7); }
+  /* the duration set on the title screen with up / down */
+  #demoset { position: fixed; right: 18px; top: 16px; z-index: 6; display: none; color: var(--muted);
+             font: 600 14px ui-monospace, monospace; background: rgba(12,14,20,.7); padding: 4px 10px; border-radius: 8px; }
+  /* Claude hijacks the real game (Jessica) */
+  #hack { position: fixed; inset: 0; z-index: 8; display: none; pointer-events: none; }
+  #hack canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #override { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: none; text-align: center;
+              background: #0a0406; border: 3px solid var(--claude); padding: 14px 30px 12px; }
+  #override b { display: block; font: 700 clamp(28px, 4.2vw, 56px) "DejaVu Sans Mono", ui-monospace, Menlo, monospace;
+                color: #ffdc78; text-shadow: 3px 0 #ff3c3c, -3px 0 #3cc8ff; letter-spacing: .02em; }
+  #override span { display: block; margin-top: 10px; font: 400 clamp(14px, 1.6vw, 22px) ui-monospace, Menlo, monospace; color: var(--claude); }
+</style>
+</head>
+<body>
+  <!-- Overclocked at the Devoxx Robot Games (Jessica): part 1 (the robots), then the game live, Claude hijacks it, part 2 -->
+  <div class="stage on" id="s-part1"><video id="v1" src="1-robots.mp4" preload="auto" playsinline></video></div>
+  <div class="stage" id="s-live"><iframe id="game" title="Overclocked, live"></iframe></div>
+  <div class="stage" id="s-part2"><video id="v2" src="2-claude.mp4" preload="auto" playsinline></video></div>
+  <div class="stage" id="s-planb"><video id="vb" src="planB-full-video.mp4" preload="auto" playsinline></video></div>
+  <div id="hack"><canvas id="noise"></canvas><div id="override"><b>⚠ SYSTEM OVERRIDE</b></div></div>
+  <div id="count"><small>DEMO</small><span id="countv">1:15</span></div>
+  <div id="demoset">Demo: 1:15</div>
+  <button id="next" type="button" title="Part 2 (or press →)">Part 2 ▶</button>
+  <div id="offline">No connection: the game can't load.<br>Press <b>B</b> for the full video (plan B).</div>
+  <div id="help">
+    <kbd>→</kbd> or <kbd>Space</kbd> next step &nbsp; <kbd>P</kbd> pause / play &nbsp; <kbd>F</kbd> full screen &nbsp; <kbd>B</kbd> plan B (full video)<br>
+    On the title screen: <kbd>↑</kbd> <kbd>↓</kbd> demo length (5 s steps) &nbsp; <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> jump to a step &nbsp; <kbd>R</kbd> restart &nbsp; <kbd>M</kbd> bottom margin (if the screen cuts the bottom) &nbsp; <kbd>?</kbd> this help<br>
+    The demo countdown starts at your first click in the game; at 0:00 Claude hijacks the screen and part 2 starts.
+  </div>
+<script>
+  // the game: the contest version (?game=… to point elsewhere, e.g. a local copy); ?demo=60 sets the demo length too
+  const Q = new URLSearchParams(location.search);
+  // the contest version, from the laptop itself (same code, bundled in one file): no Wi-Fi needed (Jessica)
+  const GAME = Q.get('game') || 'overclocked-contest-offline.html';
+  const $ = id => document.getElementById(id);
+  const v1 = $('v1'), v2 = $('v2'), vb = $('vb'), game = $('game'), next = $('next');
+  let step = 'ready', gameLoaded = false; // ready → part1 → live → hijack → part2 → end   (or planb)
+  const loadGame = () => { if (!gameLoaded) { gameLoaded = true; game.src = GAME; } };
+
+  function show(id) {
+    if (id !== 's-live') { try { game.blur(); window.focus(); } catch (e) {} } // the keys come back to the page once the game is hidden
+    for (const s of document.querySelectorAll('.stage')) s.classList.toggle('on', s.id === id);
+    for (const v of [v1, v2, vb]) if (!v.closest('.stage').classList.contains('on')) v.pause();
+  }
+  function play(v) { try { v.currentTime = v.currentTime; const p = v.play(); if (p) p.catch(() => {}); } catch (e) {} }
+
+  // the demo: DEMO s from the first click in the game (or WAIT s after it appears); at 0:00 Claude hijacks the screen
+  let DEMO = Math.max(15, Math.min(180, +(Q.get('demo') || 75))); const WAIT = 20;
+  let tLive = null, tShown = null;
+  const fmt = s => { const a = Math.abs(Math.trunc(s)); return Math.floor(a / 60) + ':' + String(a % 60).padStart(2, '0'); };
+  let setT; function showDemoSet() { const d = $('demoset'); d.textContent = 'Demo: ' + fmt(DEMO); d.style.display = 'block'; clearTimeout(setT); setT = setTimeout(() => d.style.display = 'none', 1300); }
+  setInterval(() => {
+    const now = performance.now() / 1000, cnt = $('count');
+    const live = step === 'live'; cnt.style.display = live ? 'flex' : 'none';
+    if (live && tLive === null && tShown !== null && now - tShown > WAIT) tLive = now; // no click yet: it starts anyway
+    if (live) {
+      const r = tLive === null ? DEMO : DEMO - (now - tLive);
+      $('countv').textContent = r > 0 ? fmt(Math.ceil(r)) : '0:00'; cnt.className = r <= 0 ? 'zero' : r <= 10 ? 'warn' : '';
+      if (r <= 0) hijack(); // time's up: Claude takes the screen
+    }
+  }, 200);
+
+  // the glitch sounds, made here (the first key press of the talk lets the page play sound)
+  let ac = null; const audioOn = () => { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) {} };
+  function glitchSound(d) {
+    if (!ac) return; const t = ac.currentTime, g = ac.createGain(); g.gain.value = 0.06; g.connect(ac.destination);
+    const len = Math.floor(ac.sampleRate * d), buf = ac.createBuffer(1, len, ac.sampleRate), x = buf.getChannelData(0);
+    for (let k = 0; k < 12; k++) { const s0 = Math.floor(Math.random() * len * 0.9), L = Math.floor(ac.sampleRate * (0.02 + Math.random() * 0.06)); for (let i = s0; i < Math.min(len, s0 + L); i++) x[i] = Math.random() * 2 - 1; }
+    const n = ac.createBufferSource(); n.buffer = buf; n.connect(g); n.start(t);
+    const o = ac.createOscillator(), og = ac.createGain(); o.type = 'square'; o.frequency.setValueAtTime(900, t + 0.3); o.frequency.exponentialRampToValueAtTime(120, t + 0.85);
+    og.gain.setValueAtTime(0, t); og.gain.setValueAtTime(0.03, t + 0.3); og.gain.linearRampToValueAtTime(0.005, t + 0.9); o.connect(og); og.connect(ac.destination); o.start(t + 0.3); o.stop(t + 0.95);
+  }
+
+  // Claude hijacks the real game (Jessica): the game shakes, its colours tear, noise and "SYSTEM OVERRIDE" over it,
+  // then part 2 picks up with the static and Claude appearing. Accessible: no brightness flicker, gentle colour shift,
+  // and the broken state changes only every 170 ms (under 3 flashes a second)
+  const HACK = 950;
+  function hijack() {
+    if (step !== 'live') return;
+    step = 'hijack'; next.classList.remove('show'); $('count').style.display = 'none';
+    const hack = $('hack'), cv = $('noise'), x = cv.getContext('2d'), ov = $('override');
+    cv.width = innerWidth; cv.height = innerHeight; hack.style.display = 'block'; glitchSound(HACK / 1000);
+    const t0 = performance.now(); let tick = -1, st = null;
+    (function frame() {
+      const e = (performance.now() - t0) / HACK, k = Math.min(1, e * 1.3), W = cv.width, H = cv.height;
+      if (e >= 1) { game.style.transform = game.style.filter = ''; hack.style.display = 'none'; ov.style.display = 'none'; toPart2(); return; }
+      game.style.transform = `translate(${(Math.random() - .5) * 16 * k}px, ${(Math.random() - .5) * 6 * k}px) skewX(${(Math.random() - .5) * 3 * k}deg)`;
+      const tk = Math.floor((performance.now() - t0) / 170);
+      if (tk === tick) { requestAnimationFrame(frame); return; } tick = tk;
+      game.style.filter = `hue-rotate(${(Math.random() - .5) * 50 * k}deg) saturate(${1 + .5 * k}) contrast(${1 + .15 * k})`;
+      x.clearRect(0, 0, W, H);
+      for (let i = 0; i < 3 + 12 * k; i++) { // torn bands, in the colours pulled apart (soft)
+        const y = Math.random() * H, h = 3 + Math.random() * 26 * k; x.fillStyle = ['rgba(255,60,60,.16)', 'rgba(60,200,255,.16)', 'rgba(255,255,255,.06)', 'rgba(0,0,0,.25)'][i % 4];
+        x.fillRect((Math.random() - .5) * 120 * k, y, W, h);
+      }
+      for (let i = 0; i < 4 * k; i++) { const w = 30 + Math.random() * 140, h = 4 + Math.random() * 16; x.fillStyle = `rgba(${120 + Math.random() * 60},${160 + Math.random() * 40},200,.25)`; x.fillRect(Math.random() * W, Math.random() * H, w, h); }
+      x.fillStyle = 'rgba(0,0,0,.12)'; for (let y = 0; y < H; y += 3) x.fillRect(0, y, W, 1); // scan lines
+      if (e > 0.88) { const img = x.createImageData(W >> 2, H >> 2); for (let i = 0; i < img.data.length; i += 4) { const v = Math.random() * 30; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
+        const c2 = document.createElement('canvas'); c2.width = W >> 2; c2.height = H >> 2; c2.getContext('2d').putImageData(img, 0, 0); x.imageSmoothingEnabled = false; x.drawImage(c2, 0, 0, W, H); ov.style.display = 'none'; }
+      else if (e > 0.32) { ov.style.display = 'block'; ov.style.transform = `translate(calc(-50% + ${(Math.random() - .5) * 12}px), calc(-50% + ${(Math.random() - .5) * 8}px))`; }
+      requestAnimationFrame(frame);
+    })();
+  }
+
+  function toReady() {
+    step = 'ready'; tLive = null; show('s-part1'); v1.pause(); v1.currentTime = 0; next.classList.remove('show'); $('offline').style.display = 'none';
+  }
+  function toPart1() { audioOn(); step = 'part1'; show('s-part1'); play(v1); next.classList.remove('show'); }
+  function toLive() {
+    if (step !== 'live') { tLive = null; tShown = performance.now() / 1000; } step = 'live'; show('s-live'); next.classList.add('show');
+    loadGame();
+    $('offline').style.display = navigator.onLine === false && /^https?:\/\/(?!localhost|127\.)/.test(GAME) ? 'block' : 'none';
+  }
+  function toPart2() { step = 'part2'; show('s-part2'); v2.currentTime = 0; play(v2); next.classList.remove('show'); $('offline').style.display = 'none'; }
+  function toPlanB() { audioOn(); step = 'planb'; show('s-planb'); vb.currentTime = 0; play(vb); next.classList.remove('show'); $('offline').style.display = 'none'; }
+
+  function advance() {
+    if (step === 'ready') toPart1();
+    else if (step === 'part1') toLive();
+    else if (step === 'live') hijack();
+  }
+  // the first click in the game (the page loses the focus to it) starts the demo's countdown
+  addEventListener('blur', () => { if (step === 'live' && tLive === null) setTimeout(() => { if (document.activeElement === game && tLive === null) tLive = performance.now() / 1000; }, 0); });
+  // the game loads in the background while part 1 plays, so it's ready at once
+  v1.addEventListener('play', loadGame, { once: true });
+  v1.addEventListener('ended', () => { if (step === 'part1') toLive(); });
+  v2.addEventListener('ended', () => { step = 'end'; });  // stays on the last frame: thank you and the links
+  vb.addEventListener('ended', () => { step = 'end'; });
+  next.addEventListener('click', e => { e.stopPropagation(); hijack(); });
+  // a click on a video: the next step at the start, pause/play otherwise
+  for (const v of [v1, v2, vb]) v.addEventListener('click', () => { if (step === 'ready') toPart1(); else if (v.paused) play(v); else v.pause(); });
+
+  addEventListener('keydown', e => {
+    const k = e.key; audioOn();
+    // during the demo, the page's own shortcuts are off (Jessica): the game's keys (arrows, 1 2 3, F, M, R...) must
+    // never skip to part 2 or change the page. Only B (plan B) stays; the key goes back to the game instead
+    if (step === 'live' || step === 'hijack') {
+      if ((k === 'b' || k === 'B') && step === 'live') { toPlanB(); return; }
+      e.preventDefault(); try { game.focus(); game.contentWindow.focus(); } catch (err) {} return;
+    }
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') { e.preventDefault(); advance(); }
+    else if ((k === 'ArrowUp' || k === 'ArrowDown') && step === 'ready') { e.preventDefault(); DEMO = Math.max(15, Math.min(180, DEMO + (k === 'ArrowUp' ? 5 : -5))); showDemoSet(); }
+    else if (k === 'p' || k === 'P') { const v = { part1: v1, part2: v2, planb: vb }[step]; if (v) v.paused ? play(v) : v.pause(); }
+    else if (k === 'b' || k === 'B') toPlanB();
+    else if (k === '1') toPart1(); else if (k === '2') toLive(); else if (k === '3') toPart2();
+    else if (k === 'r' || k === 'R') toReady();
+    else if (k === 'm' || k === 'M') { setGap((GAPS.indexOf(gap) + 1) % GAPS.length); }
+    else if (k === 'f' || k === 'F') { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); }
+    else if (k === '?' || k === 'h' || k === 'H') { const h = $('help'); h.style.display = h.style.display === 'block' ? 'none' : 'block'; }
+  });
+  // the mouse pointer hides itself on the videos after 2 s without moving
+  let idle; addEventListener('mousemove', () => { document.body.classList.remove('hidecursor'); clearTimeout(idle);
+    idle = setTimeout(() => { if (step !== 'live') document.body.classList.add('hidecursor'); }, 2000); });
+  // the bottom margin (M): none, about one line of text, about two; remembered on this laptop
+  const GAPS = [0, 6, 12]; let gap = 0, gapT;
+  function setGap(i) {
+    gap = GAPS[i]; document.documentElement.style.setProperty('--gap', gap + 'vh');
+    try { localStorage.setItem('overclocked.gap', String(i)); } catch (e) {}
+    const d = $('demoset'), was = d.textContent; d.textContent = gap ? `Bottom margin: ${i === 1 ? 'one line' : 'two lines'}` : 'Bottom margin: none';
+    d.style.display = 'block'; clearTimeout(gapT); gapT = setTimeout(() => { if (step === 'ready') showDemoSet(); else d.style.display = 'none'; }, 1500);
+  }
+  try { const i = +(localStorage.getItem('overclocked.gap') || 0); if (i > 0 && i < GAPS.length) setGap(i); } catch (e) {}
+  toReady();
+</script>
+</body>
+</html>
